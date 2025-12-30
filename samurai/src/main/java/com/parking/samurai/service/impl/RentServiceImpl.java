@@ -1,0 +1,135 @@
+package com.parking.samurai.service.impl;
+
+
+import com.parking.samurai.domain.entity.ParkingSpot;
+import com.parking.samurai.domain.entity.Rent;
+import com.parking.samurai.domain.entity.User;
+import com.parking.samurai.repository.ParkingSpotRepository;
+import com.parking.samurai.repository.RentRepository;
+import com.parking.samurai.service.RentService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class RentServiceImpl implements RentService {
+
+    private final ParkingSpotRepository spotRepository;
+    private final RentRepository rentRepository;
+
+
+    @Override
+    public Rent rentSpotNow(Long spotId) {
+        ParkingSpot spot = getAvailableSpot(spotId);
+        User user = getCurrentUser();
+
+
+
+        Rent rent = Rent.builder()
+                .parkingSpot(spot)
+                .user(user)
+                .startTime(LocalDateTime.now())
+                .active(true)
+                .priceAtRentTime(spot.getPricePerHour())
+                .build();
+
+        BigDecimal totalPrice = spot.getPricePerHour(); // минимум за 1 час
+        rent.setTotalPrice(totalPrice);
+        rent.setPriceAtRentTime(spot.getPricePerHour());
+        rent.setPaymentStatus(Rent.PaymentStatus.PENDING);
+
+        //spot.setAvailable(false);
+        rentRepository.save(rent);
+        spotRepository.save(spot);
+
+        return rent;
+    }
+
+    private User getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        assert auth != null;
+        return (User) auth.getPrincipal();
+    }
+
+    @Override
+    public Rent rentSpotForPeriod(Long spotId, LocalDateTime endTime) {
+        if (endTime.isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("End time cannot be in the past");
+        }
+
+        ParkingSpot spot = getAvailableSpot(spotId);
+
+        User user = getCurrentUser();
+
+        Rent rent = Rent.builder()
+                .parkingSpot(spot)
+                .user(user)
+                .startTime(LocalDateTime.now())
+                .endTime(endTime)
+                .active(true)
+                .priceAtRentTime(spot.getPricePerHour())
+                .build();
+
+        BigDecimal totalPrice = calculateTotalPrice(spot, LocalDateTime.now(), endTime);
+        rent.setTotalPrice(totalPrice);
+        rent.setEndTime(endTime);
+        rent.setPaymentStatus(Rent.PaymentStatus.PENDING);
+
+        //spot.setAvailable(false);
+
+        rentRepository.save(rent);
+        spotRepository.save(spot);
+
+        return rent;
+    }
+
+    @Override
+    public void cancelRent(Long rentId) {
+        Rent rent = rentRepository.findById(rentId)
+                .orElseThrow(() -> new RuntimeException("Rent not found"));
+
+
+        if (!rent.isActive()) {
+            throw new IllegalStateException("Rent is already inactive");
+        }
+
+        /*if (rent.getPaymentStatus() != Rent.PaymentStatus.PAID) {
+            throw new IllegalStateException("Cannot cancel rent without payment");
+        }*/
+
+        rent.setActive(false);
+        ParkingSpot spot = rent.getParkingSpot();
+        spot.setAvailable(true);
+
+        rentRepository.save(rent);
+        spotRepository.save(spot);
+    }
+
+    private ParkingSpot getAvailableSpot(Long spotId) {
+        ParkingSpot spot = spotRepository.findById(spotId)
+                .orElseThrow(() -> new RuntimeException("Spot not found"));
+
+        if (!spot.isAvailable()) {
+            throw new IllegalStateException("Spot is already rented");
+        }
+
+        return spot;
+    }
+
+    private BigDecimal calculateTotalPrice(ParkingSpot spot, LocalDateTime start, LocalDateTime end) {
+        if (end == null) {
+            // Для "rent now" — например, минимальная цена или по часам (можно настраивать)
+            return spot.getPricePerHour().multiply(BigDecimal.valueOf(1)); // 1 час минимум
+        }
+        long hours = java.time.Duration.between(start, end).toHours();
+        if (hours < 1) hours = 1;
+        return spot.getPricePerHour().multiply(BigDecimal.valueOf(hours));
+    }
+}
