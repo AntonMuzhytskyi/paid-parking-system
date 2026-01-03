@@ -2,7 +2,7 @@ package com.parking.samurai.controller;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.parking.samurai.domain.entity.ParkingSpot;
+import com.parking.samurai.entity.ParkingSpot;
 import com.parking.samurai.repository.ParkingSpotRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,7 +1,6 @@
-package com.parking.samurai.domain.entity;
+package com.parking.samurai.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
@@ -10,6 +9,13 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+
+/**
+* JPA entity representing a parking spot in the system.
+* Contains pricing and availability information.
+* Linked to Rent entities to keep rental history (for future extensions).
+* Designed to be used as a core domain model in the parking management flow.
+*/
 
 @Entity
 @Table(name = "parking_spots")
@@ -26,14 +32,16 @@ public class ParkingSpot {
     private Long id;
 
     @NotBlank(message = "Location is required")
-    private String location; // Например, "A-15", "B-3"
+    private String location;  // Example: "A-15", "B-3"
 
     @Positive(message = "Price must be positive")
     private BigDecimal pricePerHour;
 
-    private boolean available = true; // По умолчанию доступно
+    private boolean available = true;
 
-    // История аренд этого места (для будущего функционала)
+    // Rental history for this parking spot.
+    // Marked with @JsonIgnore to avoid circular references in JSON serialization.
+    // Can be used later for analytics or reporting features.
     @OneToMany(mappedBy = "parkingSpot", cascade = CascadeType.ALL, orphanRemoval = true)
     //@JsonManagedReference
     @JsonIgnore

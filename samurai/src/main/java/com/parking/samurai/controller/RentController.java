@@ -1,10 +1,10 @@
 package com.parking.samurai.controller;
 
-import com.parking.samurai.domain.entity.Rent;
-import com.parking.samurai.domain.entity.ParkingSpot;
+import com.parking.samurai.entity.Rent;
+import com.parking.samurai.entity.ParkingSpot;
 import com.parking.samurai.repository.ParkingSpotRepository;
 import com.parking.samurai.repository.RentRepository;
-import com.parking.samurai.domain.entity.User;
+import com.parking.samurai.entity.User;
 import com.parking.samurai.service.WebSocketService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,8 +17,16 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
-@Tag(name = "Rents", description = "API для аренды парковочных мест")
+/**
+* This REST controller handles parking spot rental operations.
+* Supports booking, canceling, and fetching active rents.
+* Integrates with WebSocketService to notify clients of real-time parking spot availability changes.
+* SecurityContext is used to identify the current authenticated user.
+*/
+
+@Tag(name = "Rents", description = "API for parking spot rental")
 @RestController
 @RequestMapping("/api/v1/rents")
 @RequiredArgsConstructor
@@ -28,8 +36,9 @@ public class RentController {
     private final ParkingSpotRepository parkingSpotRepository;
     private final RentRepository rentRepository;
 
-    // Метод для получения текущего пользователя из JWT
     private User getCurrentUser() {
+        // Retrieves the currently authenticated user from Spring Security context.
+        // Throws an exception if no user is authenticated.
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new IllegalStateException("User not authenticated");
@@ -37,47 +46,56 @@ public class RentController {
         return (User) authentication.getPrincipal();
     }
 
-    @Operation(summary = "Арендовать место с немедленной оплатой (основной флоу)")
+    @Operation(summary = "Book a parking spot with immediate payment (main flow)")
     @PostMapping("/book/{spotId}")
     public ResponseEntity<Rent> bookSpot(@PathVariable Long spotId) {
+        // Retrieves the parking spot by ID.
         ParkingSpot spot = parkingSpotRepository.findById(spotId)
                 .orElseThrow(() -> new RuntimeException("Parking spot not found"));
 
+        // Ensure the spot is available.
         if (!spot.isAvailable()) {
             throw new IllegalStateException("Parking spot is already rented");
         }
 
         User user = getCurrentUser();
 
-        BigDecimal totalPrice = spot.getPricePerHour(); // минимум за 1 час
+        BigDecimal totalPrice = spot.getPricePerHour();
 
+        // Creates a new Rent entity and marks the spot as unavailable.
         Rent rent = Rent.builder()
                 .parkingSpot(spot)
                 .user(user)
                 .startTime(LocalDateTime.now())
-                .endTime(null) // для "rent now"
+                .endTime(null)
                 .active(true)
                 .priceAtRentTime(spot.getPricePerHour())
                 .totalPrice(totalPrice)
-                .paymentStatus(Rent.PaymentStatus.PAID) // сразу оплачено
+                .paymentStatus(Rent.PaymentStatus.PAID)
                 .build();
 
         spot.setAvailable(false);
 
+        // Saves the rent and updates the spot.
         rentRepository.save(rent);
         parkingSpotRepository.save(spot);
+
+        // Notify clients via WebSocket about the change in availability.
         webSocketService.notifyParkingSpotsChanged();
 
         return ResponseEntity.status(HttpStatus.CREATED).body(rent);
     }
 
-    @Operation(summary = "Отменить аренду (освободить место, без возврата денег)")
+    @Operation(summary = "Cancel a rent (free up spot, no refund)")
     @PostMapping("/cancel/{rentId}")
     public ResponseEntity<Void> cancelRent(@PathVariable Long rentId) {
+        // Retrieves the rent by ID.
         Rent rent = rentRepository.findById(rentId)
                 .orElseThrow(() -> new RuntimeException("Rent not found"));
 
         User currentUser = getCurrentUser();
+
+        // Only the owner of the rent can cancel it.
         if (!rent.getUser().getId().equals(currentUser.getId())) {
             throw new IllegalStateException("You can only cancel your own rent");
         }
@@ -86,6 +104,7 @@ public class RentController {
             throw new IllegalStateException("Rent is already inactive");
         }
 
+        // Marks rent as inactive and frees up the parking spot.
         rent.setActive(false);
         rent.getParkingSpot().setAvailable(true);
 
@@ -93,93 +112,23 @@ public class RentController {
         parkingSpotRepository.save(rent.getParkingSpot());
         webSocketService.notifyParkingSpotsChanged();
 
-        return ResponseEntity.noContent().build(); // 204 — идеально
+        return ResponseEntity.noContent().build(); // 204 — no content
     }
 
 
+    @Operation(summary = "Get my current active rent")
+    @GetMapping("/my-active")
+    public ResponseEntity<Rent> getMyActiveRent() {
+        // Retrieves the currently authenticated user.
+        User user = getCurrentUser();
+
+        // Finds the active rent for the user.
+        Optional<Rent> activeRent = rentRepository.findTopByUserIdAndActiveTrue(user.getId());
+
+        // Returns the active rent or 204 if none exists.
+        return activeRent
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.noContent().build()); // 204 если нет активной
+    }
 
 }
-
-/*
-package com.parking.samurai.controller;
-
-import com.parking.samurai.domain.entity.ParkingSpot;
-import com.parking.samurai.domain.entity.Rent;
-import com.parking.samurai.domain.entity.User;
-import com.parking.samurai.repository.ParkingSpotRepository;
-import com.parking.samurai.repository.RentRepository;
-import com.parking.samurai.service.RentService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDateTime;
-
-@Tag(name = "Rents", description = "API для аренды парковочных мест")
-@RestController
-@RequestMapping("/api/v1/rents")
-@RequiredArgsConstructor
-public class RentController {
-
-    private final RentService rentService;
-    private final ParkingSpotRepository spotRepository;
-    private final RentRepository rentRepository;
-
-    @Operation(summary = "Арендовать место прямо сейчас (с таймером)")
-    @PostMapping("/now/{spotId}")
-    public ResponseEntity<Rent> rentNow(@PathVariable Long spotId) {
-        Rent rent = rentService.rentSpotNow(spotId);
-        return new ResponseEntity<>(rent, HttpStatus.CREATED);
-    }
-
-    @Operation(summary = "Арендовать место на фиксированный период")
-    @PostMapping("/period/{spotId}")
-    public ResponseEntity<Rent> rentForPeriod(
-            @PathVariable Long spotId,
-            @RequestParam String endTime) {  // формат: 2025-12-30T15:30:00
-        LocalDateTime end = LocalDateTime.parse(endTime);
-        Rent rent = rentService.rentSpotForPeriod(spotId, end);
-        return new ResponseEntity<>(rent, HttpStatus.CREATED);
-    }
-
-    @Operation(summary = "Отменить аренду")
-    @PostMapping("/cancel/{rentId}")
-    public ResponseEntity<Void> cancel(@PathVariable Long rentId) {
-        rentService.cancelRent(rentId);
-        return ResponseEntity.noContent().build();
-    }
-
-    @Operation(summary = "Арендовать и сразу оплатить место (рекомендуемый флоу)")
-    @PostMapping("/book-and-pay/{spotId}")
-    public ResponseEntity<Rent> bookAndPay(@PathVariable Long spotId) {
-        // Сначала создаём аренду (как в rentSpotNow)
-        ParkingSpot spot = spotRepository.findById(spotId)
-                .orElseThrow(() -> new RuntimeException("Spot not found"));
-
-        if (!spot.isAvailable()) {
-            throw new IllegalStateException("Spot is already rented");
-        }
-
-        User user = getCurrentUser();  // метод из SecurityContext
-
-        Rent rent = Rent.builder()
-                .parkingSpot(spot)
-                .user(user)
-                .startTime(LocalDateTime.now())
-                .active(true)
-                .priceAtRentTime(spot.getPricePerHour())
-                .totalPrice(spot.getPricePerHour())  // минимум за 1 час, можно улучшить
-                .paymentStatus(Rent.PaymentStatus.PAID)  // сразу оплачено!
-                .build();
-
-        spot.setAvailable(false);
-
-        rentRepository.save(rent);
-        spotRepository.save(spot);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(rent);
-    }
-}*/

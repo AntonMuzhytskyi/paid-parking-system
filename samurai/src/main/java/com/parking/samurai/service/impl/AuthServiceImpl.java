@@ -1,6 +1,6 @@
 package com.parking.samurai.service.impl;
 
-import com.parking.samurai.domain.entity.User;
+import com.parking.samurai.entity.User;
 import com.parking.samurai.dto.AuthRequest;
 import com.parking.samurai.dto.AuthResponse;
 import com.parking.samurai.dto.RegisterRequest;
@@ -13,6 +13,12 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+/**
+* Implementation of AuthService for handling user registration and authentication.
+* Encapsulates all security logic including password hashing, authentication,
+* and JWT token generation. Decouples controllers from security details.
+*/
+
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
@@ -24,11 +30,10 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponse register(RegisterRequest request) {
+        // Create a new user entity with encoded password
         User user = User.builder()
                 .username(request.username())
                 .password(passwordEncoder.encode(request.password()))
-                .fullName(request.fullName())
-                .phone(request.phone())
                 .build();
 
         userRepository.save(user);
@@ -39,6 +44,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponse authenticate(AuthRequest request) {
+        // Authenticate credentials using Spring Security AuthenticationManager
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.username(),

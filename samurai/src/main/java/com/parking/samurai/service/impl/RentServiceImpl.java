@@ -1,9 +1,8 @@
 package com.parking.samurai.service.impl;
 
-
-import com.parking.samurai.domain.entity.ParkingSpot;
-import com.parking.samurai.domain.entity.Rent;
-import com.parking.samurai.domain.entity.User;
+import com.parking.samurai.entity.ParkingSpot;
+import com.parking.samurai.entity.Rent;
+import com.parking.samurai.entity.User;
 import com.parking.samurai.repository.ParkingSpotRepository;
 import com.parking.samurai.repository.RentRepository;
 import com.parking.samurai.service.RentService;
@@ -16,6 +15,14 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+* Service implementation for managing parking spot rentals.
+* Handles "rent now", fixed-period rentals, and cancellations.
+* Encapsulates all business rules such as availability checks, price calculation,
+* active status management, and user association.
+* Marked as @Transactional to ensure atomic operations.
+*/
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -24,13 +31,10 @@ public class RentServiceImpl implements RentService {
     private final ParkingSpotRepository spotRepository;
     private final RentRepository rentRepository;
 
-
     @Override
     public Rent rentSpotNow(Long spotId) {
         ParkingSpot spot = getAvailableSpot(spotId);
         User user = getCurrentUser();
-
-
 
         Rent rent = Rent.builder()
                 .parkingSpot(spot)
@@ -40,12 +44,11 @@ public class RentServiceImpl implements RentService {
                 .priceAtRentTime(spot.getPricePerHour())
                 .build();
 
-        BigDecimal totalPrice = spot.getPricePerHour(); // минимум за 1 час
+        BigDecimal totalPrice = spot.getPricePerHour(); // minimum 1 hour
         rent.setTotalPrice(totalPrice);
         rent.setPriceAtRentTime(spot.getPricePerHour());
         rent.setPaymentStatus(Rent.PaymentStatus.PENDING);
 
-        //spot.setAvailable(false);
         rentRepository.save(rent);
         spotRepository.save(spot);
 
@@ -82,8 +85,6 @@ public class RentServiceImpl implements RentService {
         rent.setEndTime(endTime);
         rent.setPaymentStatus(Rent.PaymentStatus.PENDING);
 
-        //spot.setAvailable(false);
-
         rentRepository.save(rent);
         spotRepository.save(spot);
 
@@ -95,14 +96,9 @@ public class RentServiceImpl implements RentService {
         Rent rent = rentRepository.findById(rentId)
                 .orElseThrow(() -> new RuntimeException("Rent not found"));
 
-
         if (!rent.isActive()) {
             throw new IllegalStateException("Rent is already inactive");
         }
-
-        /*if (rent.getPaymentStatus() != Rent.PaymentStatus.PAID) {
-            throw new IllegalStateException("Cannot cancel rent without payment");
-        }*/
 
         rent.setActive(false);
         ParkingSpot spot = rent.getParkingSpot();
@@ -125,7 +121,7 @@ public class RentServiceImpl implements RentService {
 
     private BigDecimal calculateTotalPrice(ParkingSpot spot, LocalDateTime start, LocalDateTime end) {
         if (end == null) {
-            // Для "rent now" — например, минимальная цена или по часам (можно настраивать)
+            // For "rent now": minimum 1 hour charge
             return spot.getPricePerHour().multiply(BigDecimal.valueOf(1)); // 1 час минимум
         }
         long hours = java.time.Duration.between(start, end).toHours();

@@ -12,6 +12,12 @@ import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.function.Function;
 
+/**
+* Service responsible for JWT creation, validation, and claim extraction.
+* Encapsulates all JWT-related logic to keep security concerns isolated.
+* Uses a configurable secret key and expiration time loaded from application properties.
+*/
+
 @Service
 public class JwtService {
 
@@ -52,6 +58,7 @@ public class JwtService {
         return resolver.apply(claims);
     }
 
+    // Parses the token and retrieves all claims using the signing key.
     private Claims extractAllClaims(String token) {
         return Jwts.parser()
                 .verifyWith(getSignKey())
@@ -60,6 +67,7 @@ public class JwtService {
                 .getPayload();
     }
 
+    // Builds the signing key from a Base64-encoded secret.
     private SecretKey getSignKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secret);
         return Keys.hmacShaKeyFor(keyBytes);

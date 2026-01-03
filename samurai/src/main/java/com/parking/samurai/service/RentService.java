@@ -1,15 +1,21 @@
 package com.parking.samurai.service;
 
-
-import com.parking.samurai.domain.entity.Rent;
+import com.parking.samurai.entity.Rent;
 
 import java.time.LocalDateTime;
 
-public interface RentService {
+/**
+* Handles parking spot rental lifecycle:
+* - instant rent ("rent now")
+* - fixed-period rent
+* - rent cancellation
+*/
 
-    Rent rentSpotNow(Long spotId);  // "rent now" с таймером
+ public interface RentService {
 
-    Rent rentSpotForPeriod(Long spotId, LocalDateTime endTime);  // фиксированный период
+    Rent rentSpotNow(Long spotId);
 
-    void cancelRent(Long rentId);  // отмена аренды
+    Rent rentSpotForPeriod(Long spotId, LocalDateTime endTime);
+
+    void cancelRent(Long rentId);
 }

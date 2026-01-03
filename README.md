@@ -67,13 +67,13 @@ Open Swagger UI in **two browser tabs** (or use multiple devices):
 - Book a spot in one tab
 - Watch the list of available spots update **instantly** in the other tab via WebSocket
 
-### Planned Improvements
+### Frontend Integration Example
+This backend is already connected to a React frontend (separate repository) that:
 
-- Flutter mobile client with real-time UI and countdown timer
-- Real payment integration (mock → Stripe)
-- Role-based access (ADMIN for managing spots)
-- Push notifications (FCM)
-- Rate limiting and monitoring (Spring Boot Actuator + Prometheus)
+- Displays a beautiful interactive parking map (200 spots)
+- Allows users to book and cancel spots with modals
+- Uses JWT authentication
+- Updates the map after booking/cancellation
 
 ### Why This Project?
 

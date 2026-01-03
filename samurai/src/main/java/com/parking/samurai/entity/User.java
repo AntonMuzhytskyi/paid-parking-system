@@ -1,5 +1,4 @@
-package com.parking.samurai.domain.entity;
-
+package com.parking.samurai.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -10,6 +9,13 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.List;
 
+/**
+* JPA entity representing an application user.
+* Implements Spring Security's UserDetails interface to integrate with authentication and authorization.
+* Stores credentials and basic profile information.
+* Designed to be extended later with roles and permissions.
+*/
+
 @Entity
 @Table(name = "users")
 @Getter
@@ -17,7 +23,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User implements UserDetails {  // Важно: реализует UserDetails для Spring Security
+public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_seq")
@@ -28,19 +34,21 @@ public class User implements UserDetails {  // Важно: реализует Us
     @Column(unique = true)
     private String username;
 
+    // Encrypted user password (stored as a hash).
     @NotBlank
-    private String password;  // Будет хэшироваться
+    private String password;
 
-    private String fullName;
-
-    private String phone;
-
-    // Spring Security поля
+    // Spring Security authorities.
+    // Currently returns an empty list (no roles assigned).
+    // TODO: Can be extended later with ROLE_USER, ROLE_ADMIN, etc.
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of();  // Пока без ролей, потом добавим ROLE_USER, ROLE_ADMIN
+        return List.of();
     }
 
+
+    // Account state flags required by Spring Security.
+    // All return true for simplicity in this MVP implementation.
     @Override
     public boolean isAccountNonExpired() { return true; }
 
