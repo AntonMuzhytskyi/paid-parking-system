@@ -1,26 +1,29 @@
-# Этап 1: Сборка приложения
+# Этап 1: Сборка
 FROM eclipse-temurin:25-jdk-alpine AS builder
 
 WORKDIR /app
 
-# Копируем только pom.xml сначала (для кэширования зависимостей)
+# Копируем Maven Wrapper и pom.xml сначала (для кэширования зависимостей)
+COPY mvnw .
+COPY .mvn .mvn
 COPY pom.xml .
 
-# Скачиваем зависимости (это закешируется, если pom не менялся)
-RUN ./mvnw dependency:go-offline
+# Делаем mvnw исполняемым и скачиваем зависимости
+RUN chmod +x ./mvnw
+RUN ./mvnw dependency:go-offline -B
 
 # Копируем исходный код
 COPY src ./src
 
-# Собираем JAR (skip tests для скорости, если хочешь — убери -DskipTests)
-RUN ./mvnw clean package -DskipTests
+# Собираем JAR (skip tests для скорости)
+RUN ./mvnw clean package -DskipTests -B
 
-# Этап 2: Запуск приложения (минимальный образ)
+# Этап 2: Запуск (лёгкий образ)
 FROM eclipse-temurin:25-jre-alpine
 
 WORKDIR /app
 
-# Копируем только собранный JAR из предыдущего этапа
+# Копируем только JAR из builder
 COPY --from=builder /app/target/*.jar app.jar
 
 EXPOSE 8080
