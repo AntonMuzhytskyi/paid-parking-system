@@ -28,6 +28,7 @@ public class CorsConfig {
                 "https://*.vercel.app"
         ));*/
         config.setAllowedOrigins(List.of(
+                "http://localhost:5173",
                 "https://paid-parking-frontend.vercel.app"
         ));
         config.setAllowCredentials(true);
