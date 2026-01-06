@@ -53,6 +53,7 @@ public class SecurityConfig {
     }
 }*/
 
+
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -65,7 +66,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(Customizer.withDefaults()) // твой отдельный CORS
+                .cors(Customizer.withDefaults())  // использует твой отдельный CorsConfig
 
                 .authorizeHttpRequests(auth -> auth
                         // Открываем auth и Swagger полностью
@@ -76,12 +77,7 @@ public class SecurityConfig {
                                 "/swagger-ui/index.html",
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**",
-                                "/webjars/**",
-                                "/swagger-ui/swagger-ui.css",
-                                "/swagger-ui/index.css",
-                                "/swagger-ui/swagger-ui-bundle.js",
-                                "/swagger-ui/swagger-ui-standalone-preset.js",
-                                "/swagger-ui/favicon-*.png"
+                                "/webjars/**"
                         ).permitAll()
 
                         // Всё остальное — только с JWT
@@ -97,6 +93,4 @@ public class SecurityConfig {
 
         return http.build();
     }
-
-    // Бин CORS — Spring сам найдёт из CorsConfig
 }
