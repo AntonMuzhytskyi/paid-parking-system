@@ -32,6 +32,7 @@ public class AuthController {
     public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
         // Accepts a RegisterRequest DTO and delegates registration to AuthService.
         // Returns an AuthResponse containing user info and JWT token upon successful registration.
+        System.out.println("REGISTER HIT");
         return ResponseEntity.ok(authService.register(request));
     }
 
