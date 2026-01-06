@@ -14,6 +14,32 @@ import java.util.List;
 * Credentials (cookies, headers) are allowed.
 */
 
+
+@Configuration
+public class CorsConfig {
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+
+        config.setAllowedOrigins(List.of(
+                "http://localhost:5173",                          // локальный Vite
+                "https://paid-parking-frontend.vercel.app",       // твоя Vercel ссылка (замени, если имя другое)
+                "https://*.vercel.app"                            // все Vercel поддомены
+        ));
+
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
+}
+
+/*
 @Configuration
 public class CorsConfig {
 
@@ -29,4 +55,4 @@ public class CorsConfig {
         source.registerCorsConfiguration("/**", config);
         return source;
     }
-}
+}*/
