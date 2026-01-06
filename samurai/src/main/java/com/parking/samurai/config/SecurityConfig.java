@@ -65,7 +65,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))  // твой отдельный CORS
+                .cors(Customizer.withDefaults()) // твой отдельный CORS
 
                 .authorizeHttpRequests(auth -> auth
                         // Открываем auth и Swagger полностью
