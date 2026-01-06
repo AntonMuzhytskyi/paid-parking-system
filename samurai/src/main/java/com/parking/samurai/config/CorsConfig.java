@@ -22,22 +22,22 @@ public class CorsConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOrigins(List.of(
-                "http://localhost:5173",                          // локальный Vite
-                "https://paid-parking-frontend.vercel.app",       // твоя Vercel ссылка (замени, если имя другое)
-                "https://*.vercel.app"                            // все Vercel поддомены
+        config.setAllowedOriginPatterns(List.of(
+                "http://localhost:5173",
+                "https://paid-parking-frontend.vercel.app",
+                "https://*.vercel.app"
         ));
 
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
-        config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
     }
 }
+
 
 /*
 @Configuration
