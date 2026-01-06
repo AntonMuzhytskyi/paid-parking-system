@@ -5,6 +5,7 @@ import com.parking.samurai.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.Customizer;
@@ -51,33 +52,41 @@ public class SecurityConfig {
         return http.build();
     }
 }*/
-
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
-    private final AuthenticationProvider authenticationProvider;
     private final CorsConfig corsConfig;
 
+    // 🔓 AUTH endpoints — БЕЗ JWT, БЕЗ AUTH PROVIDER
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    @Order(1)
+    public SecurityFilterChain authSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-                // ❗ важно для Render + Cloudflare
+                .securityMatcher("/api/v1/auth/**")
                 .csrf(csrf -> csrf.disable())
-
                 .cors(cors -> cors.configurationSource(corsConfig.corsConfigurationSource()))
-
-                // ❗ важно: доверие прокси
-                .headers(headers -> headers
-                        .frameOptions(frame -> frame.disable())
-                )
-
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .anyRequest().permitAll()
+                )
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                );
+
+        return http.build();
+    }
+
+    // 🔐 ВСЁ ОСТАЛЬНОЕ — С JWT
+    @Bean
+    @Order(2)
+    public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfig.corsConfigurationSource()))
+                .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/v1/auth/**",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
@@ -86,13 +95,9 @@ public class SecurityConfig {
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
-
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-
-                //.authenticationProvider(authenticationProvider)
-
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
