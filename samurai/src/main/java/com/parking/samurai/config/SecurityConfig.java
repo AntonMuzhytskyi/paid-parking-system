@@ -52,54 +52,51 @@ public class SecurityConfig {
         return http.build();
     }
 }*/
+
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
-    private final CorsConfig corsConfig;
+    private final AuthenticationProvider authenticationProvider;
 
-    // 🔓 AUTH endpoints — БЕЗ JWT, БЕЗ AUTH PROVIDER
     @Bean
-    @Order(1)
-    public SecurityFilterChain authSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .securityMatcher("/api/v1/auth/**")
-                .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configurationSource(corsConfig.corsConfigurationSource()))
-                .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll()
-                )
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                );
-
-        return http.build();
-    }
-
-    // 🔐 ВСЁ ОСТАЛЬНОЕ — С JWT
-    @Bean
-    @Order(2)
-    public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configurationSource(corsConfig.corsConfigurationSource()))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))  // твой отдельный CORS
+
                 .authorizeHttpRequests(auth -> auth
+                        // Открываем auth и Swagger полностью
                         .requestMatchers(
+                                "/api/v1/auth/**",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
+                                "/swagger-ui/index.html",
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**",
-                                "/webjars/**"
+                                "/webjars/**",
+                                "/swagger-ui/swagger-ui.css",
+                                "/swagger-ui/index.css",
+                                "/swagger-ui/swagger-ui-bundle.js",
+                                "/swagger-ui/swagger-ui-standalone-preset.js",
+                                "/swagger-ui/favicon-*.png"
                         ).permitAll()
+
+                        // Всё остальное — только с JWT
                         .anyRequest().authenticated()
                 )
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
+
+                .authenticationProvider(authenticationProvider)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
+
+    // Бин CORS — Spring сам найдёт из CorsConfig
 }
