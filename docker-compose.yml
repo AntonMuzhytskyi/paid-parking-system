@@ -2,16 +2,16 @@ version: '3.8'
 
 services:
   db:
-    image: postgres:16-alpine  # Лёгкая и свежая версия Postgres
+    image: postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: parking_db
       POSTGRES_USER: parking_user
-      POSTGRES_PASSWORD: parking_pass  # В MVP можно простой, потом заменим на secret
+      POSTGRES_PASSWORD: parking_pass
     ports:
-      - "5432:5432"  # Делаем доступной на localhost:5432
+      - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data  # Чтобы данные не пропадали при перезапуске
+      - postgres_data:/var/lib/postgresql/data
 
 volumes:
   postgres_data:

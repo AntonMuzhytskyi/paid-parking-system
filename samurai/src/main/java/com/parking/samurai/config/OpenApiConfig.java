@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @OpenAPIDefinition(
         info = @Info(title = "Paid Parking Management System", version = "1.0", description = "MVP API"),
-        security = @SecurityRequirement(name = "bearerAuth")  // Глобально требует JWT для всех endpoints
+        security = @SecurityRequirement(name = "bearerAuth")
 )
 @SecurityScheme(
         name = "bearerAuth",
@@ -24,5 +24,6 @@ import org.springframework.context.annotation.Configuration;
         scheme = "bearer",
         bearerFormat = "JWT"
 )
+
 public class OpenApiConfig {
 }

@@ -1,7 +1,6 @@
 package com.parking.samurai.controller;
 
 import com.parking.samurai.entity.Rent;
-import com.parking.samurai.entity.ParkingSpot;
 import com.parking.samurai.repository.ParkingSpotRepository;
 import com.parking.samurai.repository.RentRepository;
 import com.parking.samurai.entity.User;
@@ -10,7 +9,6 @@ import com.parking.samurai.service.RentService;
 import com.parking.samurai.service.WebSocketService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -20,8 +18,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 /**
@@ -45,17 +41,6 @@ public class RentController {
 
     private final UserRepository userRepository;
 
-    /*private User getCurrentUser() {
-        // Retrieves the currently authenticated user from Spring Security context.
-        // Throws an exception if no user is authenticated.
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new IllegalStateException("User not authenticated");
-        }
-        return (User) authentication.getPrincipal();
-    }*/
-    // Не забудь добавить в поля контроллера: private final UserRepository userRepository;
-
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -65,19 +50,16 @@ public class RentController {
 
         Object principal = authentication.getPrincipal();
 
-        // Если это уже объект User (как мы ожидаем)
         if (principal instanceof User) {
             return (User) principal;
         }
 
-        // Если это UserDetails (стандарт Spring Security)
         if (principal instanceof UserDetails) {
             String username = ((UserDetails) principal).getUsername();
             return userRepository.findByUsername(username)
                     .orElseThrow(() -> new RuntimeException("User not found in database"));
         }
 
-        // Если это просто строка (Username/Email)
         if (principal instanceof String) {
             return userRepository.findByUsername((String) principal)
                     .orElseThrow(() -> new RuntimeException("User not found in database"));
@@ -86,56 +68,17 @@ public class RentController {
         throw new IllegalStateException("Unexpected principal type: " + principal.getClass());
     }
 
-    /*@Operation(summary = "Book a parking spot with immediate payment (main flow)")
-    @PostMapping("/book/{spotId}")
-    public ResponseEntity<Rent> bookSpot(@PathVariable Long spotId) {
-        // Retrieves the parking spot by ID.
-        ParkingSpot spot = parkingSpotRepository.findById(spotId)
-                .orElseThrow(() -> new RuntimeException("Parking spot not found"));
-
-        // Ensure the spot is available.
-        if (!spot.isAvailable()) {
-            throw new IllegalStateException("Parking spot is already rented");
-        }
-
-        User user = getCurrentUser();
-
-        BigDecimal totalPrice = spot.getPricePerHour();
-
-        // Creates a new Rent entity and marks the spot as unavailable.
-        Rent rent = Rent.builder()
-                .parkingSpot(spot)
-                .user(user)
-                .startTime(LocalDateTime.now())
-                .endTime(null)
-                .active(true)
-                .priceAtRentTime(spot.getPricePerHour())
-                .totalPrice(totalPrice)
-                .paymentStatus(Rent.PaymentStatus.PAID)
-                .build();
-
-        spot.setAvailable(false);
-
-        // Saves the rent and updates the spot.
-        rentRepository.save(rent);
-        parkingSpotRepository.save(spot);
-
-        // Notify clients via WebSocket about the change in availability.
-        webSocketService.notifyParkingSpotsChanged();
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(rent);
-    }*/
     @Operation(summary = "Book a parking spot with immediate payment (main flow)")
     @PostMapping("/book/{spotId}")
     public ResponseEntity<Rent> bookSpot(@PathVariable Long spotId) {
-        // Вызываем сервис, где вся магия с БД под защитой @Transactional
+
         Rent rent = rentService.bookSpot(spotId);
 
-        // Только ПОСЛЕ успешного сохранения в БД уведомляем WebSocket
+        // Websocket notification only after rent save
         try {
             webSocketService.notifyParkingSpotsChanged();
         } catch (Exception e) {
-            // Ошибка в вебсокете не должна ломать успешную аренду
+            // Websocket error should not brake successful rent
             log.error("WebSocket notification failed", e);
         }
 
@@ -184,7 +127,7 @@ public class RentController {
         // Returns the active rent or 204 if none exists.
         return activeRent
                 .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.noContent().build()); // 204 если нет активной
+                .orElse(ResponseEntity.noContent().build());
     }
 
 }

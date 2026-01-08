@@ -7,14 +7,13 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
+
 /**
 * Configures CORS (Cross-Origin Resource Sharing) for the backend.
 * Allows the frontend (running on http://localhost:5173) to make requests
 * to this backend, including GET, POST, PUT, DELETE, and OPTIONS methods.
 * Credentials (cookies, headers) are allowed.
 */
-
-
 
 @Configuration
 public class CorsConfig {
@@ -25,7 +24,7 @@ public class CorsConfig {
 
         config.setAllowedOrigins(List.of(
                 "http://localhost:5173",
-                "https://paid-parking-frontend.vercel.app",  // твоя Vercel ссылка
+                "https://paid-parking-frontend.vercel.app",
                 "https://*.vercel.app"
         ));
 
@@ -39,22 +38,3 @@ public class CorsConfig {
         return source;
     }
 }
-
-
-/*
-@Configuration
-public class CorsConfig {
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
-    }
-}*/

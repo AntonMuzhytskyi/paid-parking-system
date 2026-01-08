@@ -68,12 +68,10 @@ public class RentServiceImpl implements RentService {
 
         Object principal = auth.getPrincipal();
 
-        // Если это уже объект User
         if (principal instanceof User) {
             return (User) principal;
         }
 
-        // Если на Render пришла строка (Email/Username)
         String username;
         if (principal instanceof UserDetails) {
             username = ((UserDetails) principal).getUsername();
@@ -81,8 +79,7 @@ public class RentServiceImpl implements RentService {
             username = principal.toString();
         }
 
-        // Ищем в базе, чтобы вернуть именно объект User
-        return userRepository.findByUsername(username) // Или findByUsername, проверь как в репозитории
+        return userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found in DB: " + username));
     }
 
@@ -159,7 +156,6 @@ public class RentServiceImpl implements RentService {
     @Override
     @Transactional
     public Rent bookSpot(Long spotId) {
-        // 1. Ищем место
         ParkingSpot spot = spotRepository.findById(spotId)
                 .orElseThrow(() -> new RuntimeException("Parking spot not found"));
 
@@ -167,10 +163,7 @@ public class RentServiceImpl implements RentService {
             throw new IllegalStateException("Parking spot is already rented");
         }
 
-        // 2. Получаем юзера (используем твой исправленный метод с проверкой типов)
         User user = getCurrentUser();
-
-        // 3. Создаем аренду
         Rent rent = Rent.builder()
                 .parkingSpot(spot)
                 .user(user)
@@ -181,10 +174,8 @@ public class RentServiceImpl implements RentService {
                 .paymentStatus(Rent.PaymentStatus.PAID)
                 .build();
 
-        // 4. Меняем статус места
         spot.setAvailable(false);
 
-        // 5. Сохраняем (Hibernate сам поймет порядок)
         spotRepository.save(spot);
         return rentRepository.save(rent);
     }

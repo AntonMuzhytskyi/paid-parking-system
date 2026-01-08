@@ -41,12 +41,6 @@ public class RentExpirationScheduler {
 
         log.info("Found {} expired 'rent now' sessions. Expiring...", expiredRents.size());
 
-        /*for (Rent rent : expiredRents) {
-            // Marks rent as inactive and frees the associated parking spot.
-            rent.setActive(false);
-            rent.getParkingSpot().setAvailable(true);
-            log.info("Expired rent id={} for spot id={}", rent.getId(), rent.getParkingSpot().getId());
-        }*/
         for (Rent rent : expiredRents) {
             rent.setActive(false);
             if (rent.getParkingSpot() != null) {
