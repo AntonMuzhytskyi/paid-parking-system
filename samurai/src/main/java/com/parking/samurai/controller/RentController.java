@@ -9,6 +9,7 @@ import com.parking.samurai.repository.UserRepository;
 import com.parking.samurai.service.WebSocketService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -81,7 +82,7 @@ public class RentController {
         throw new IllegalStateException("Unexpected principal type: " + principal.getClass());
     }
 
-    @Operation(summary = "Book a parking spot with immediate payment (main flow)")
+    /*@Operation(summary = "Book a parking spot with immediate payment (main flow)")
     @PostMapping("/book/{spotId}")
     public ResponseEntity<Rent> bookSpot(@PathVariable Long spotId) {
         // Retrieves the parking spot by ID.
@@ -117,6 +118,22 @@ public class RentController {
 
         // Notify clients via WebSocket about the change in availability.
         webSocketService.notifyParkingSpotsChanged();
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(rent);
+    }*/
+    @Operation(summary = "Book a parking spot with immediate payment (main flow)")
+    @PostMapping("/book/{spotId}")
+    public ResponseEntity<Rent> bookSpot(@PathVariable Long spotId) {
+        // Вызываем сервис, где вся магия с БД под защитой @Transactional
+        Rent rent = rentService.bookSpot(spotId);
+
+        // Только ПОСЛЕ успешного сохранения в БД уведомляем WebSocket
+        try {
+            webSocketService.notifyParkingSpotsChanged();
+        } catch (Exception e) {
+            // Ошибка в вебсокете не должна ломать успешную аренду
+            log.error("WebSocket notification failed", e);
+        }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(rent);
     }

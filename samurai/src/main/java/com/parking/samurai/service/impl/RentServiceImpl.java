@@ -128,4 +128,40 @@ public class RentServiceImpl implements RentService {
         if (hours < 1) hours = 1;
         return spot.getPricePerHour().multiply(BigDecimal.valueOf(hours));
     }
+
+
+
+
+    @Override
+    @Transactional
+    public Rent bookSpot(Long spotId) {
+        // 1. Ищем место
+        ParkingSpot spot = spotRepository.findById(spotId)
+                .orElseThrow(() -> new RuntimeException("Parking spot not found"));
+
+        if (!spot.isAvailable()) {
+            throw new IllegalStateException("Parking spot is already rented");
+        }
+
+        // 2. Получаем юзера (используем твой исправленный метод с проверкой типов)
+        User user = getCurrentUser();
+
+        // 3. Создаем аренду
+        Rent rent = Rent.builder()
+                .parkingSpot(spot)
+                .user(user)
+                .startTime(LocalDateTime.now())
+                .active(true)
+                .priceAtRentTime(spot.getPricePerHour())
+                .totalPrice(spot.getPricePerHour())
+                .paymentStatus(Rent.PaymentStatus.PAID)
+                .build();
+
+        // 4. Меняем статус места
+        spot.setAvailable(false);
+
+        // 5. Сохраняем (Hibernate сам поймет порядок)
+        spotRepository.save(spot);
+        return rentRepository.save(rent);
+    }
 }

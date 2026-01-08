@@ -41,13 +41,21 @@ public class RentExpirationScheduler {
 
         log.info("Found {} expired 'rent now' sessions. Expiring...", expiredRents.size());
 
-        for (Rent rent : expiredRents) {
+        /*for (Rent rent : expiredRents) {
             // Marks rent as inactive and frees the associated parking spot.
             rent.setActive(false);
             rent.getParkingSpot().setAvailable(true);
             log.info("Expired rent id={} for spot id={}", rent.getId(), rent.getParkingSpot().getId());
+        }*/
+        for (Rent rent : expiredRents) {
+            rent.setActive(false);
+            if (rent.getParkingSpot() != null) {
+                rent.getParkingSpot().setAvailable(true);
+            }
         }
 
+        rentRepository.saveAll(expiredRents);
+        log.info("Expired {} sessions", expiredRents.size());
         // Explicit saveAll() is not required.
         // Entities are managed by Hibernate and changes are flushed automatically at transaction commit.
     }

@@ -18,4 +18,5 @@ import java.time.LocalDateTime;
     Rent rentSpotForPeriod(Long spotId, LocalDateTime endTime);
 
     void cancelRent(Long rentId);
+    Rent bookSpot(Long spotId);
 }
