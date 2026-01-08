@@ -47,6 +47,7 @@ public class Rent {
 
     // Indicates whether the rent is currently active.
     // Active rents block the parking spot from being booked by others.
+    @Builder.Default
     private boolean active = true;
 
     // Price per hour at the moment of rent creation.

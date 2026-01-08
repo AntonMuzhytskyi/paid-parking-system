@@ -6,11 +6,13 @@ import com.parking.samurai.repository.ParkingSpotRepository;
 import com.parking.samurai.repository.RentRepository;
 import com.parking.samurai.entity.User;
 import com.parking.samurai.repository.UserRepository;
+import com.parking.samurai.service.RentService;
 import com.parking.samurai.service.WebSocketService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -33,8 +35,10 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/v1/rents")
 @RequiredArgsConstructor
+@Slf4j
 public class RentController {
 
+    private final RentService rentService;
     private final WebSocketService webSocketService;
     private final ParkingSpotRepository parkingSpotRepository;
     private final RentRepository rentRepository;

@@ -37,6 +37,7 @@ public class ParkingSpot {
     @Positive(message = "Price must be positive")
     private BigDecimal pricePerHour;
 
+    @Builder.Default
     private boolean available = true;
 
     // Rental history for this parking spot.
