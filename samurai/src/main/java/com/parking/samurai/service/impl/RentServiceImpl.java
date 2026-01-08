@@ -5,10 +5,12 @@ import com.parking.samurai.entity.Rent;
 import com.parking.samurai.entity.User;
 import com.parking.samurai.repository.ParkingSpotRepository;
 import com.parking.samurai.repository.RentRepository;
+import com.parking.samurai.repository.UserRepository;
 import com.parking.samurai.service.RentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,11 +32,14 @@ public class RentServiceImpl implements RentService {
 
     private final ParkingSpotRepository spotRepository;
     private final RentRepository rentRepository;
+    private final UserRepository userRepository;
 
     @Override
     public Rent rentSpotNow(Long spotId) {
         ParkingSpot spot = getAvailableSpot(spotId);
         User user = getCurrentUser();
+
+        spot.setAvailable(false);
 
         Rent rent = Rent.builder()
                 .parkingSpot(spot)
@@ -57,8 +62,28 @@ public class RentServiceImpl implements RentService {
 
     private User getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        assert auth != null;
-        return (User) auth.getPrincipal();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new IllegalStateException("User not authenticated");
+        }
+
+        Object principal = auth.getPrincipal();
+
+        // Если это уже объект User
+        if (principal instanceof User) {
+            return (User) principal;
+        }
+
+        // Если на Render пришла строка (Email/Username)
+        String username;
+        if (principal instanceof UserDetails) {
+            username = ((UserDetails) principal).getUsername();
+        } else {
+            username = principal.toString();
+        }
+
+        // Ищем в базе, чтобы вернуть именно объект User
+        return userRepository.findByUsername(username) // Или findByUsername, проверь как в репозитории
+                .orElseThrow(() -> new RuntimeException("User not found in DB: " + username));
     }
 
     @Override
@@ -70,6 +95,8 @@ public class RentServiceImpl implements RentService {
         ParkingSpot spot = getAvailableSpot(spotId);
 
         User user = getCurrentUser();
+
+        spot.setAvailable(false);
 
         Rent rent = Rent.builder()
                 .parkingSpot(spot)
@@ -128,9 +155,6 @@ public class RentServiceImpl implements RentService {
         if (hours < 1) hours = 1;
         return spot.getPricePerHour().multiply(BigDecimal.valueOf(hours));
     }
-
-
-
 
     @Override
     @Transactional
