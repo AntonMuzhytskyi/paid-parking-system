@@ -5,6 +5,7 @@ import com.parking.samurai.entity.ParkingSpot;
 import com.parking.samurai.repository.ParkingSpotRepository;
 import com.parking.samurai.repository.RentRepository;
 import com.parking.samurai.entity.User;
+import com.parking.samurai.repository.UserRepository;
 import com.parking.samurai.service.WebSocketService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -13,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -36,7 +38,9 @@ public class RentController {
     private final ParkingSpotRepository parkingSpotRepository;
     private final RentRepository rentRepository;
 
-    private User getCurrentUser() {
+    private final UserRepository userRepository;
+
+    /*private User getCurrentUser() {
         // Retrieves the currently authenticated user from Spring Security context.
         // Throws an exception if no user is authenticated.
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -44,6 +48,37 @@ public class RentController {
             throw new IllegalStateException("User not authenticated");
         }
         return (User) authentication.getPrincipal();
+    }*/
+    // Не забудь добавить в поля контроллера: private final UserRepository userRepository;
+
+    private User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new IllegalStateException("User not authenticated");
+        }
+
+        Object principal = authentication.getPrincipal();
+
+        // Если это уже объект User (как мы ожидаем)
+        if (principal instanceof User) {
+            return (User) principal;
+        }
+
+        // Если это UserDetails (стандарт Spring Security)
+        if (principal instanceof UserDetails) {
+            String username = ((UserDetails) principal).getUsername();
+            return userRepository.findByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("User not found in database"));
+        }
+
+        // Если это просто строка (Username/Email)
+        if (principal instanceof String) {
+            return userRepository.findByUsername((String) principal)
+                    .orElseThrow(() -> new RuntimeException("User not found in database"));
+        }
+
+        throw new IllegalStateException("Unexpected principal type: " + principal.getClass());
     }
 
     @Operation(summary = "Book a parking spot with immediate payment (main flow)")
