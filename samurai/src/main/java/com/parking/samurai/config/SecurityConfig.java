@@ -21,7 +21,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 * JWT authentication is integrated via JwtAuthenticationFilter, and stateless session management is enforced.
 */
 
-/*@Configuration
+@Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
@@ -51,9 +51,10 @@ public class SecurityConfig {
 
         return http.build();
     }
-}*/
+}
 
 
+/*
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -74,4 +75,4 @@ public class SecurityConfig {
 
         return http.build();
     }
-}
+}*/
